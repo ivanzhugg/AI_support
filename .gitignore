@@ -1,0 +1,23 @@
+# виртуальные окружения
+venv/
+.env
+*.env
+
+# ключи и json с сервисными аккаунтами
+service-account.json
+
+# кэш и временные файлы
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+
+# системное
+.DS_Store
+Thumbs.db
