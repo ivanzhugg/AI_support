@@ -17,11 +17,11 @@ from utils.Upload_chats import Upload_chats
 from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent  # .../backend
 
-# <<< NEW >>>
+
 import asyncio
 from utils.idle_manager import IdleManager
 
-# ---- ЛОГИ ----
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -36,22 +36,21 @@ qd = Qdrant()
 db = Db()
 up = Upload_chats()
 
-# <<< NEW >>> ваш скрипт, запускаемый после 5 минут простоя
 def run_idle_script():
     logging.info("[IDLE] maintenance started")
     up.upload()
     logging.info("[IDLE] maintenance finished")
 
-# <<< NEW >>> обёртка, чтобы не блокировать event loop
+
 async def on_idle():
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, run_idle_script)
 
-# <<< NEW >>> менеджер простоя: 300 сек = 5 минут
+
 idle = IdleManager(idle_seconds=300, on_idle=on_idle)
 
 
-# Раздача статики (папка backend/static)
+
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 @app.api_route("/chat.js", methods=["GET", "HEAD"])
@@ -61,7 +60,7 @@ def serve_chat_js():
         media_type="application/javascript",
         headers={"Cache-Control": "no-store"},
     )
-# CORS: для MVP разрешаем всё (можно сузить позже под свои домены)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -70,7 +69,7 @@ app.add_middleware(
     allow_credentials=False,
 )
 
-# ---- МОДЕЛИ ----
+
 class ReplyIn(BaseModel):
     sid: str = Field(..., min_length=8, max_length=128, description="Клиентский session id (UUID)")
     message: str = Field(..., min_length=1, max_length=4000, description="Текст пользователя")
@@ -78,14 +77,14 @@ class ReplyIn(BaseModel):
 class ReplyOut(BaseModel):
     sid: str
     reply: str
-    echoed_at: str  # ISO UTC время ответа
+    echoed_at: str  
 
-# ---- ЭНДПОИНТЫ ----
+
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     return {"ok": True}
 
-# <<< NEW >>> на выключении аккуратно останавливаем таймер
+
 @app.on_event("shutdown")
 async def _shutdown():
     await idle.stop()
@@ -94,7 +93,6 @@ async def _shutdown():
 async def reply(payload: ReplyIn, request: Request):
     client_ip: Optional[str] = request.client.host if request.client else None
 
-    # <<< NEW >>> ПИНГ здесь: любое действие откладывает запуск на 5 минут
     await idle.ping()
 
     logging.info("[RECV] ip=%s sid=%s message=%r", client_ip, payload.sid, payload.message)
